@@ -107,6 +107,10 @@ class RouteServiceProvider extends ServiceProvider
             $router->delete('plugin/edit_code/{id}', 'PluginCodeController@delete');
             $router->get('plugin/{id}/executeBatch', 'PluginController@executeBatch');
 
+            $router->get('server_log/getTree', 'ServerLogController@getTreeData');
+            $router->get('server_log/selectFile', 'ServerLogController@getFileEditForm');
+            $router->get('server_log', 'ServerLogController@index');
+
             $router->get('table/menuModal/{id}', 'CustomTableController@menuModal');
 
             $router->get("workflow/beginning", 'WorkflowController@beginningForm');
