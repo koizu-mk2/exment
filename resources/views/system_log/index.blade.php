@@ -1,7 +1,7 @@
 <div class="box box-info">
     <!-- box-header -->
     <div class="box-header with-border">
-        <h3 class="box-title">{{ exmtrans('plugincode.upload_header') }}</h3>
+        <h3 class="box-title">{{ exmtrans('system_log.subheader') }}</h3>
 
         <div class="box-tools pull-right">
             <button type="button" class="btn btn-box-tool" data-widget="collapse">
@@ -16,13 +16,7 @@
         <div class="fields-group">
             <div class="form-group">
                 <span class="help-block">
-                    <i class="fa fa-info-circle"></i>&nbsp;{{ exmtrans('plugincode.message.upload_file', $filepath) }}
-                </span>
-                <span class="help-block">
-                    <i class="fa fa-info-circle"></i>&nbsp;{{ exmtrans('plugincode.message.file_edit') }}
-                </span>
-                <span class="help-block">
-                    <i class="fa fa-warning"></i>&nbsp;{{ exmtrans('plugincode.message.force_updated') }}
+                    <i class="fa fa-info-circle"></i>&nbsp;{{ exmtrans('system_log.subdescription') }}
                 </span>
             </div>
         </div>
@@ -31,6 +25,4 @@
         @endif
             
     </div>
-    <!-- /.box-body -->
-    <input type="hidden" id="plugin_file_path" name="plugin_file_path" value="{{ $filepath }}">
 </div>

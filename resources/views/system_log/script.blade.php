@@ -16,7 +16,7 @@
         });
     }
 
-    $(document).on('click.exment_server_log', '.log_links a', {}, function(ev){
+    $(document).on('click.exment_system_log', '.log_links a', {}, function(ev){
         ev.preventDefault();
 
         $.ajax({

@@ -234,6 +234,10 @@ class Define
             'uri' => 'auth/logs',
             'icon' => 'fa-file-text',
         ],
+        'system_log' => [
+            'uri' => 'system_log',
+            'icon' => 'fa-file-text-o',
+        ],
         'api_setting' => [
             'uri' => 'api_setting',
             'icon' => 'fa-code-fork',

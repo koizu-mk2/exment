@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Pagination\LengthAwarePaginator;
 
-class ServerLogController extends AdminControllerBase
+class SystemLogController extends AdminControllerBase
 {
     /**
      * constructer
@@ -17,7 +17,7 @@ class ServerLogController extends AdminControllerBase
      */
     public function __construct()
     {
-        $this->setPageInfo(exmtrans("plugincode.header"), exmtrans("plugincode.header"), exmtrans("plugincode.description"), 'fa-plug');
+        $this->setPageInfo(exmtrans("system_log.header"), exmtrans("system_log.header"), exmtrans("system_log.description"), 'fa-file-text-o');
     }
 
     /**
@@ -29,10 +29,6 @@ class ServerLogController extends AdminControllerBase
      */
     public function index(Request $request, Content $content)
     {
-        if(config('logging.default', 'stack') != 'stack'){
-            admin_warning(trans('admin.alert'), 'ログの出力先が変更されています。その場合、この画面では正常にログを確認できない場合があります。');
-        }
-
         $this->AdminContent($content);
         $content->row(function (Row $row) use($request){
             if(\File::exists($this->getLogFullPath('laravel.log'))){
@@ -41,15 +37,14 @@ class ServerLogController extends AdminControllerBase
                 $view = $box->style('info');
             }
             else{
-                $view = view('exment::log.index', [
-                    'url' => admin_url("server_log"),
+                $view = view('exment::system_log.index', [
+                    'url' => admin_url("system_log"),
                     'filepath' => '/',
-                    'message' => exmtrans('plugincode.message.upload_file'),
                 ]);
             }
             
             $html = $view->render();
-            $html .= view('exment::log.script')->render();
+            $html .= view('exment::system_log.script')->render();
 
             $row->column(9, $html);
 
@@ -62,8 +57,8 @@ class ServerLogController extends AdminControllerBase
     protected function getJsTreeBox()
     {
         $view = view('exment::widgets.jstree', [
-            'data_get_url' => "server_log/getTree",
-            'file_get_url' => "server_log/selectFile",
+            'data_get_url' => "system_log/getTree",
+            'file_get_url' => "system_log/selectFile",
         ]);
         $box = new Box('', $view);
 
@@ -122,16 +117,21 @@ class ServerLogController extends AdminControllerBase
             'nodepath' => 'required',
         ]);
         if ($validator->fails()) {
-            return [view('exment::plugin.editor.info'), false];
+            throw new \Exception;
+        }
+        $nodepath = str_replace('//', '/', $request->get('nodepath'));
+
+        // path root check, if search as ex. "../../", throw new exception.
+        if(strpos(str_replace(' ', '', $nodepath), '..') !== false){
+            throw new \Exception(exmtrans('system_log.errors.cannot_read_file'));
         }
 
-        $nodepath = str_replace('//', '/', $request->get('nodepath'));
         try {
-            if (is_dir($this->getLogFullPath($nodepath))) {
-                return [view('exment::log.index', [
-                    'url' => admin_url("server_log"),
+            $targetPath = $this->getLogFullPath($nodepath);
+            if (is_dir($targetPath)) {
+                return [view('exment::system_log.index', [
+                    'url' => admin_url("system_log"),
                     'filepath' => $nodepath,
-                    'message' => exmtrans('plugincode.message.upload_file'),
                 ]), false];
             }
             return [$this->getLogDataForm($request, $nodepath), true];
@@ -153,11 +153,12 @@ class ServerLogController extends AdminControllerBase
         try {
             $filedata = $this->getLogData($nodepath);
             $page = $request->get('page') ?? 1;
-            $texts = array_slice($filedata, ($page - 1) * 1000, 1000);
+            $length = config('exment.system_log_length', 2000);
+            $texts = array_slice($filedata, ($page - 1) * $length, $length);
 
-            $paginator = new LengthAwarePaginator($texts, count($filedata), 1000, $page, ['path' => admin_urls_query('server_log', 'selectFile', ['nodepath' => $nodepath])]);
+            $paginator = new LengthAwarePaginator($texts, count($filedata), $length, $page, ['path' => admin_urls_query('system_log', 'selectFile', ['nodepath' => $nodepath])]);
 
-            return view('exment::log.log', [
+            return view('exment::system_log.log', [
                 'filepath' => $nodepath,
                 'filedata' => implode('', $texts),
                 'paginator' => $paginator,

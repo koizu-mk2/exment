@@ -1689,6 +1689,7 @@ return [
             'mail_template' => 'Mail template',
             'mail' => 'Email transmission history',
             'operation_log' => 'Operation log',
+            'system_log' => 'System Log',
             'api_setting' => 'API Setting',
             'login_setting' => 'Login Setting',
         ],
@@ -1926,6 +1927,17 @@ return [
         'input' => 'Input/Query',
     ],
     
+    'system_log' => [
+        'header' => 'System Log',
+        'description' => 'Lists the output system logs.',
+        'subheader' => 'Select Log',
+        'subdescription' => 'Select the log file to display from the tree on the right.',
+
+        'errors' => [
+            'cannot_read_file' => 'This file cannot be displayed.',
+        ],
+    ],
+
     'chart' => [
         'chartitem_label' => 'Chart Label',
         'chartitem_manual' => 'Chart Setting',

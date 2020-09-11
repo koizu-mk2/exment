@@ -1687,6 +1687,7 @@ return [
             'mail_template' => 'メールテンプレート',
             'mail' => 'メール送信履歴',
             'operation_log' => '操作ログ',
+            'system_log' => 'システムログ',
             'api_setting' => 'APIアプリ設定',
             'login_setting' => 'ログイン設定',
         ],
@@ -1923,6 +1924,17 @@ return [
         'path' => 'パス',
         'ip' => 'IPアドレス',
         'input' => '入力・クエリ',
+    ],
+    
+    'system_log' => [
+        'header' => 'システムログ',
+        'description' => '出力されたシステムログを一覧表示します。',
+        'subheader' => 'ログ選択',
+        'subdescription' => '表示するログファイルを、右側のツリーから選択してください。',
+
+        'errors' => [
+            'cannot_read_file' => '表示できないファイルです。',
+        ],
     ],
     
     'chart' => [
