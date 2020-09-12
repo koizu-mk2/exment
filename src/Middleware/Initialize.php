@@ -170,12 +170,17 @@ class Initialize
             'driver' => 'local',
             'root' => storage_path('app/admin_tmp'),
         ]);
-
+        
         Config::set('filesystems.disks.admin', [
             'driver' => 'exment-driver-exment',
             'mergeFrom' => 'exment',
         ]);
         
+        Config::set('filesystems.disks.admin_log', [
+            'driver' => 'local',
+            'root' => storage_path('logs'),
+        ]);
+
         Config::set('filesystems.disks.plugin_sync', [
             'driver' => 'exment-driver-plugin',
             'mergeFrom' => 'plugin',

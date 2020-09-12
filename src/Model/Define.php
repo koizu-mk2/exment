@@ -181,7 +181,7 @@ class Define
     public const SYSTEM_KEY_SESSION_ACCESSIBLE_TABLE = "accessible_table_%s_%s";
     public const SYSTEM_KEY_SESSION_DISABLE_DATA_URL_TAG = "disable_data_url_tag";
     public const SYSTEM_KEY_SESSION_FORM_DATA_TYPE = "form_data_type";
-    public const SYSTEM_KEY_SESSION_PLUGIN_NODELIST = "plugin_treelist";
+    public const SYSTEM_KEY_SESSION_FILE_NODELIST = "file_treelist";
 
     /**
      * MENU SYSTEM DIFINITION
@@ -428,6 +428,7 @@ class Define
 
     public const DISKNAME_ADMIN = 'admin';
     public const DISKNAME_ADMIN_TMP = 'admin_tmp';
+    public const DISKNAME_LOG = 'admin_log';
     public const DISKNAME_BACKUP = 'backup';
     public const DISKNAME_BACKUP_SYNC = 'backup_sync';
     public const DISKNAME_PLUGIN = 'plugin';

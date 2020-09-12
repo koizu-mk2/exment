@@ -5,12 +5,19 @@ namespace Exceedone\Exment\Controllers;
 use Encore\Admin\Layout\Content;
 use Encore\Admin\Layout\Row;
 use Encore\Admin\Widgets\Box;
+use Exceedone\Exment\Model\Define;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class SystemLogController extends AdminControllerBase
 {
+    use CodeTreeTrait;
+    
+    protected const node_key = Define::SYSTEM_KEY_SESSION_FILE_NODELIST;
+
+    protected $disk;
+
     /**
      * constructer
      *
@@ -18,6 +25,19 @@ class SystemLogController extends AdminControllerBase
     public function __construct()
     {
         $this->setPageInfo(exmtrans("system_log.header"), exmtrans("system_log.header"), exmtrans("system_log.description"), 'fa-file-text-o');
+    }
+
+    /**
+     * Execute an action on the controller.
+     *
+     * @param  string  $method
+     * @param  array   $parameters
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
+    public function callAction($method, $parameters)
+    {
+        $this->disk = \Storage::disk(Define::DISKNAME_LOG);
+        return parent::callAction($method, $parameters);
     }
 
     /**
@@ -30,9 +50,17 @@ class SystemLogController extends AdminControllerBase
     public function index(Request $request, Content $content)
     {
         $this->AdminContent($content);
+        session()->forget(static::node_key);
+
         $content->row(function (Row $row) use($request){
-            if(\File::exists($this->getLogFullPath('laravel.log'))){
-                $view = $this->getLogDataForm($request, '/laravel.log');
+            if($this->disk->exists('laravel.log')){
+                // get nodeid
+                $json = $this->getTreeDataJson($request);
+                $node = collect($json)->first(function($j){
+                    return isMatchString(array_get($j, 'path'), '/laravel.log');
+                });
+
+                $view = $this->getLogDataForm($request, array_get($node, 'id'));
                 $box = new Box('', $view);
                 $view = $box->style('info');
             }
@@ -74,13 +102,31 @@ class SystemLogController extends AdminControllerBase
      */
     public function getTreeData(Request $request)
     {
-        $json = [];
-        $node_idx = 0;
-        $this->setDirectoryNodes('/', '#', $node_idx, $json);
-        return response()->json($json);
+        return response()->json($this->getTreeDataJson($request));
     }
 
     
+    /**
+     * Get file tree data
+     *
+     * @param Request $request
+     * @param int $id
+     * @return Response
+     */
+    protected function getTreeDataJson(Request $request)
+    {
+        if(session()->has(static::node_key)){
+            return session(static::node_key);
+        }
+
+        $json = [];
+        $this->setDirectoryNodes('/', '#', $json, true);
+        
+        // set session
+        session([static::node_key => $json]);
+        return $json;
+    }
+
 
     /**
      * Get child form html for selected file
@@ -114,27 +160,23 @@ class SystemLogController extends AdminControllerBase
     protected function getFileFormView(Request $request)
     {
         $validator = \Validator::make($request->all(), [
-            'nodepath' => 'required',
+            'nodeid' => 'required',
         ]);
         if ($validator->fails()) {
             throw new \Exception;
         }
-        $nodepath = str_replace('//', '/', $request->get('nodepath'));
-
-        // path root check, if search as ex. "../../", throw new exception.
-        if(strpos(str_replace(' ', '', $nodepath), '..') !== false){
-            throw new \Exception(exmtrans('system_log.errors.cannot_read_file'));
-        }
+        $nodeid = $request->get('nodeid');
+        $nodepath = $this->getNodePath($nodeid);
 
         try {
-            $targetPath = $this->getLogFullPath($nodepath);
+            $targetPath = getFullpath($nodepath, $this->disk);
             if (is_dir($targetPath)) {
                 return [view('exment::system_log.index', [
                     'url' => admin_url("system_log"),
                     'filepath' => $nodepath,
                 ]), false];
             }
-            return [$this->getLogDataForm($request, $nodepath), true];
+            return [$this->getLogDataForm($request, $nodeid), true];
             
         } catch (\League\Flysystem\FileNotFoundException $ex) {
             //Todo:FileNotFoundException
@@ -148,15 +190,17 @@ class SystemLogController extends AdminControllerBase
      * @param Request $request
      * @return array
      */
-    protected function getLogDataForm(Request $request, $nodepath)
+    protected function getLogDataForm(Request $request, $nodeid)
     {
         try {
+            $nodepath = $this->getNodePath($nodeid);
             $filedata = $this->getLogData($nodepath);
+
             $page = $request->get('page') ?? 1;
             $length = config('exment.system_log_length', 2000);
             $texts = array_slice($filedata, ($page - 1) * $length, $length);
 
-            $paginator = new LengthAwarePaginator($texts, count($filedata), $length, $page, ['path' => admin_urls_query('system_log', 'selectFile', ['nodepath' => $nodepath])]);
+            $paginator = new LengthAwarePaginator($texts, count($filedata), $length, $page, ['path' => admin_urls_query('system_log', 'selectFile', ['nodeid' => $nodeid])]);
 
             return view('exment::system_log.log', [
                 'filepath' => $nodepath,
@@ -171,53 +215,6 @@ class SystemLogController extends AdminControllerBase
 
     
     /**
-     * Get and set file and directory nodes in target folder
-     *
-     * @param string $folder
-     * @param string $parent
-     * @param int &$node_idx
-     * @param array &$json
-     * @param bool $isFullPath if true, this path is full path
-     * @param string $folderName root folder name.
-     */
-    protected function setDirectoryNodes($folder, $parent, &$node_idx, &$json, bool $isFullPath = false)
-    {
-        $node_idx++;
-        $directory_node = "node_$node_idx";
-        $json[] = [
-            'id' => $directory_node,
-            'parent' => $parent,
-            'text' => isMatchString($folder, '/') ? '/' : basename($folder),
-            'state' => [
-                'opened' => $parent == '#',
-                'selected' => $node_idx == 1
-            ]
-        ];
-
-        $base_path = $isFullPath ? $folder : $this->getLogFullPath($folder);
-        $directories = \File::directories($base_path);
-        foreach ($directories as $directory) {
-            $this->setDirectoryNodes($directory, $directory_node, $node_idx, $json, true);
-        }
-
-        $files = \File::files($base_path);
-        foreach ($files as $file) {
-            if(!isMatchString($file->getExtension(), 'log')){
-                continue;
-            }
-
-            $node_idx++;
-            $json[] = [
-                'id' => "node_$node_idx",
-                'parent' => $directory_node,
-                'icon' => 'jstree-file',
-                'text' => basename($file),
-            ];
-        }
-    }
-
-
-    /**
      * Get log data
      *
      * @param string $path file relative path
@@ -225,13 +222,19 @@ class SystemLogController extends AdminControllerBase
      */
     public function getLogData(string $path)
     {
-        $sotrage_path = $this->getLogFullPath($path);
+        $sotrage_path = getFullpath($path, $this->disk);
         return file($sotrage_path);
     }
 
 
-    protected function getLogFullPath($path)
-    {
-        return storage_path(path_join('logs', $path));
+    protected function getDirectoryPaths($folder){
+        return $this->disk->directories($folder);
+    }
+
+
+    protected function getFilePaths($folder){
+        return array_filter($this->disk->files($folder), function($file){
+            return isMatchString(pathinfo($file, PATHINFO_EXTENSION), 'log');
+        });
     }
 }
