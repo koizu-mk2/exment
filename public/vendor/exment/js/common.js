@@ -742,6 +742,9 @@ var Exment;
                 ///// re-loop after all data setting value
                 for (var i = 0; i < data.length; i++) {
                     var $to = $parent.find(CommonEvent.getClassKey(data[i].to));
+                    if (data[i].is_default) {
+                        $to = $('.box-body').find(CommonEvent.getClassKey(data[i].to)).first();
+                    }
                     // if $to has "calc_data" data, execute setcalc function again
                     //var to_data = $to.data('calc_data');
                     for (var key in CommonEvent.calcDataList) {
@@ -929,6 +932,13 @@ var Exment;
         }
         static getClassKey(key, prefix = '') {
             return '.' + prefix + key + ',.' + prefix + 'value_' + key;
+        }
+        static getBlockClassKey(key, block = '', prefix = '') {
+            if (block) {
+                return '.' + block + '_' + key;
+            } else {
+                return CommonEvent.getClassKey(key, prefix);
+            }
         }
         static findValue(values, keys) {
             if (!hasValue(values)) {
@@ -1158,19 +1168,26 @@ var Exment;
         // loop "data-calc" targets   
         for (var key in datalist) {
             var data = datalist[key];
+            var keys = key.split('.');
+            var block = null;
+            if (keys.length > 1) {
+                block = keys[0];
+                key = keys[1];
+            }
+
             // set data to element
             // cannot use because cannot fire new row
             //$(CommonEvent.getClassKey(key)).data('calc_data', data);
             // set calcDataList array. key is getClassKey. data is data
-            CommonEvent.calcDataList.push({ "key": key, "classKey": CommonEvent.getClassKey(key), "data": data });
+            CommonEvent.calcDataList.push({ "key": key, "classKey": CommonEvent.getBlockClassKey(key, block), "data": data });
             // set calc event
-            $('.box-body').on('change', CommonEvent.getClassKey(key), { data: data, key: key }, (ev) => __awaiter(this, void 0, void 0, function* () {
+            $('.box-body').on('change', CommonEvent.getBlockClassKey(key, block), { data: data, key: key }, (ev) => __awaiter(this, void 0, void 0, function* () {
                 yield CommonEvent.setCalc($(ev.target), ev.data.data);
             }));
             // set event for plus minus button
-            $('.box-body').on('click', '.btn-number-plus,.btn-number-minus', { data: data, key: key }, (ev) => __awaiter(this, void 0, void 0, function* () {
+            $('.box-body').on('click', '.btn-number-plus,.btn-number-minus', { data: data, key: key, block: block }, (ev) => __awaiter(this, void 0, void 0, function* () {
                 // call only has $target. $target is autocalc's key
-                let $target = $(ev.target).closest('.input-group').find(CommonEvent.getClassKey(ev.data.key));
+                let $target = $(ev.target).closest('.input-group').find(CommonEvent.getBlockClassKey(ev.data.key, ev.data.block));
                 if (!hasValue($target)) {
                     return;
                 }

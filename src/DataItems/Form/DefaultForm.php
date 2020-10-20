@@ -493,11 +493,13 @@ EOT;
 
         // keys for calc trigger on display
         $keys = [];
+        $block_name = null;
         // loop $option_calc_formulas and get column_name
         foreach ($option_calc_formulas as &$option_calc_formula) {
             $child_select_table = array_get($option_calc_formula, 'table');
             if (isset($child_select_table)) {
                 $option_calc_formula['relation_name'] = CustomRelation::getRelationNameByTables($this->custom_table, $child_select_table);
+                $block_name = $option_calc_formula['relation_name'];
             }
             switch (array_get($option_calc_formula, 'type')) {
                 case 'count':
@@ -523,7 +525,14 @@ EOT;
                     if (!isset($key)) {
                         break;
                     }
-                    $keys[] = $key;
+                    if (!$is_default) {
+                        $block_name = CustomRelation::getRelationNameByTables($this->custom_table, $formula_column->custom_table);
+                    }
+                    if (isset($block_name)) {
+                        $keys[] = "$block_name.$key";
+                    } else {
+                        $keys[] = $key;
+                    }
                     // set $option_calc_formula val using key
                     $option_calc_formula['val'] = $key;
 
