@@ -40,13 +40,9 @@ trait UserTrait
      * get organizations that this_user joins.
      * @return mixed
      */
-    public function getOrganizationIds($filterType = JoinedOrgFilterType::ALL)
+    public function getOrgIdsForPermission($filterType = JoinedOrgFilterType::ALL)
     {
-        // if system doesn't use organization, return empty array.
-        if (!System::organization_available()) {
-            return [];
-        }
-        return AuthUserOrgHelper::getOrganizationIds($filterType, $this->id);
+        return AuthUserOrgHelper::getOrgIdsForPermission($filterType, $this->id);
     }
 
     /**

@@ -270,7 +270,7 @@ class AuthUserOrgHelper
             $enum = JoinedOrgFilterType::getEnum(System::org_joined_type_role_group(), JoinedOrgFilterType::ONLY_JOIN);
             $org_target_ids = collect();
             $target_ids->each(function($target_id) use($org_target_ids, $enum){
-                collect(static::getTreeOrganizationIds($enum, $target_id))->each(function($target_id) use($org_target_ids, $enum){
+                collect(static::getTreeOrganizationIds($enum, $target_id))->each(function($target_id) use($org_target_ids){
                     $org_target_ids->push($target_id);
                 });
             });
@@ -304,9 +304,10 @@ class AuthUserOrgHelper
     
     /**
      * get organization ids by user.
+     * AND THIS LOGIC IS FOR PERMISSION CHECK. 
      * @return array
      */
-    public static function getOrganizationIds($filterType = JoinedOrgFilterType::ALL, $targetUserId = null) : array
+    public static function getOrgIdsForPermission($filterType = JoinedOrgFilterType::ALL, $targetUserId = null) : array
     {
         // if system doesn't use organization, return empty array.
         if (!System::organization_available()) {
@@ -322,7 +323,7 @@ class AuthUserOrgHelper
 
         $results = [];
         foreach ($orgsArray as $org) {
-            static::setUserJoinedOrganization($results, $org, $filterType, $targetUserId);
+            static::setUserJoinedOrganizationForPermission($results, $org, $filterType, $targetUserId);
         }
 
         return collect($results)->pluck('id')->toArray();
@@ -442,7 +443,7 @@ class AuthUserOrgHelper
      * @param string $targetUserId
      * @return void
      */
-    protected static function setUserJoinedOrganization(&$results, $org, $filterType, $targetUserId)
+    protected static function setUserJoinedOrganizationForPermission(&$results, $org, $filterType, $targetUserId)
     {
         // set $org id only $targetUserId
         if (!array_has($org, 'users') || !collect($org['users'])->contains(function ($user) use ($targetUserId) {
@@ -454,7 +455,7 @@ class AuthUserOrgHelper
         $results[] = $org;
 
         // Set parent and child orgs.
-        // *This logic is reverse isGetDowner and parents.*
+        // *This logic is reverse isGetDowner and parents. Because for permission*
         if (JoinedOrgFilterType::isGetDowner($filterType) && array_has($org, 'parents')) {
             foreach ($org['parents'] as $parent) {
                 $results[] = $parent;
@@ -491,7 +492,7 @@ class AuthUserOrgHelper
 
         // First, get users org joined
         $db_table_name_pivot = CustomRelation::getRelationNameByTables(SystemTableName::ORGANIZATION, SystemTableName::USER);
-        $target_users = \DB::table($db_table_name_pivot)->whereIn('parent_id', $user->getOrganizationIds($joinedOrgFilterType))
+        $target_users = \DB::table($db_table_name_pivot)->whereIn('parent_id', $user->getOrgIdsForPermission($joinedOrgFilterType))
             ->get(['child_id'])->pluck('child_id');
 
         $target_users = $target_users->merge($user->getUserId())->unique();
@@ -523,7 +524,7 @@ class AuthUserOrgHelper
         $joinedOrgFilterType = JoinedOrgFilterType::getEnum($setting);
 
         // get only login user's organization
-        $builder->whereIn("$db_table_name.id", $user->getOrganizationIds($joinedOrgFilterType));
+        $builder->whereIn("$db_table_name.id", $user->getOrgIdsForPermission($joinedOrgFilterType));
     }
 
     /**
