@@ -203,4 +203,14 @@ class MailSender
         );
         return true;
     }
+
+    /**
+     * Get the value of the notifiable's primary key.
+     *
+     * @return String
+     */
+    public function getKey()
+    {
+        return $this->to;
+    }
 }
