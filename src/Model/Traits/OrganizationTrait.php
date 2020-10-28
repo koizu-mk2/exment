@@ -111,7 +111,7 @@ trait OrganizationTrait
      * @param [type] $joinedOrgFilterType
      * @return void
      */
-    public function getOrganizationIds($filterType = JoinedOrgFilterType::ALL)
+    public function getOrgIdsForPermission($filterType = JoinedOrgFilterType::ALL)
     {
         return System::requestSession(sprintf(Define::SYSTEM_KEY_SESSION_ORGANIZATION_IDS_ORG, $this->id, $filterType), function () use ($filterType) {
             $orgs = collect();
