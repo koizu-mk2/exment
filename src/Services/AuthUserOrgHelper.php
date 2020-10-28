@@ -207,8 +207,10 @@ class AuthUserOrgHelper
      * @param CustomTable $target_table access table.
      * @param string $related_type "user" or "organization"
      * @param string|array|null $tablePermission target permission
+     * 
+     * @return array
      */
-    protected static function getRoleUserOrgId($target_table, $related_type, $tablePermission = null)
+    protected static function getRoleUserOrgId($target_table, string $related_type, $tablePermission = null) : array
     {
         $target_table = CustomTable::getEloquent($target_table);
         
@@ -267,16 +269,48 @@ class AuthUserOrgHelper
         if ($related_type == SystemTableName::USER) {
             $target_ids = $target_ids->merge(System::system_admin_users() ?? []);
         }
+        // consider org parent and child
+        elseif($related_type == SystemTableName::ORGANIZATION){
+            $enum = JoinedOrgFilterType::getEnum(System::org_joined_type_role_group(), JoinedOrgFilterType::ONLY_JOIN);
+            $org_target_ids = collect();
+            $target_ids->each(function($target_id) use($org_target_ids, $enum){
+                collect(static::getTreeOrganizationIds($enum, $target_id))->each(function($target_id) use($org_target_ids, $enum){
+                    $org_target_ids->push($target_id);
+                });
+            });
+            $target_ids = $org_target_ids->filter()->unique();
+        }
 
         return $target_ids->filter()->unique()->toArray();
     }
 
     
     /**
-     * get organization ids
-     * @return mixed
+     * get organization ids by organization ids
+     * @return array
      */
-    public static function getOrganizationIds($filterType = JoinedOrgFilterType::ALL, $targetUserId = null)
+    public static function getTreeOrganizationIds($filterType = JoinedOrgFilterType::ALL, $targetOrgId) : array
+    {
+        if (!System::organization_available()) {
+            return [];
+        }
+        // get organization and ids. only match $targetOrgId.
+        $orgsArray = collect(static::getOrganizationTreeArray())->filter(function($org) use($targetOrgId){
+            return isMatchString($targetOrgId, array_get($org, 'id'));
+        });
+        $results = [];
+        foreach ($orgsArray as $org) {
+            static::setJoinedOrganization($results, $org, $filterType, null, false);
+        }
+
+        return collect($results)->pluck('id')->toArray();
+    }
+    
+    /**
+     * get organization ids by user.
+     * @return array
+     */
+    public static function getOrganizationIds($filterType = JoinedOrgFilterType::ALL, $targetUserId = null) : array
     {
         // if system doesn't use organization, return empty array.
         if (!System::organization_available()) {
@@ -292,7 +326,7 @@ class AuthUserOrgHelper
 
         $results = [];
         foreach ($orgsArray as $org) {
-            static::setJoinedOrganization($results, $org, $filterType, $targetUserId);
+            static::setJoinedOrganization($results, $org, $filterType, $targetUserId, true);
         }
 
         return collect($results)->pluck('id')->toArray();
@@ -378,13 +412,25 @@ class AuthUserOrgHelper
         }
     }
 
-    protected static function setJoinedOrganization(&$results, $org, $filterType, $targetUserId)
+    /**
+     * Set joined organization. 
+     *
+     * @param array $results organization array.
+     * @param [type] $org
+     * @param string $filterType filter type. is upper or downer
+     * @param string $targetUserId
+     * @param bool $isCheckUserId is check target user id joined.
+     * @return void
+     */
+    protected static function setJoinedOrganization(&$results, $org, $filterType, $targetUserId, bool $isCheckUserId = true)
     {
         // set $org id only $targetUserId
-        if (!array_has($org, 'users') || !collect($org['users'])->contains(function ($user) use ($targetUserId) {
-            return $user['id'] == $targetUserId;
-        })) {
-            return;
+        if($isCheckUserId){
+            if (!array_has($org, 'users') || !collect($org['users'])->contains(function ($user) use ($targetUserId) {
+                return $user['id'] == $targetUserId;
+            })) {
+                return;
+            }
         }
 
         $results[] = $org;
