@@ -86,15 +86,11 @@ class AuthUserOrgHelper
             // and get authoritiable organization
             $organizations = static::getRoleOrganizationQueryTable($target_table)
                 ->get() ?? [];
-            foreach ($organizations as $organization) {
-                // get JoinedOrgFilterType. this method is for org_joined_type_role_group. get users for has role groups.
-                $enum = JoinedOrgFilterType::getEnum(System::org_joined_type_role_group(), JoinedOrgFilterType::ONLY_JOIN);
-                $relatedOrgs = CustomTable::getEloquent(SystemTableName::ORGANIZATION)->getValueModel()->with('users')->find($organization->getOrganizationIds($enum));
 
-                foreach ($relatedOrgs as $related_organization) {
-                    foreach ($related_organization->users as $user) {
-                        $target_ids[] = $user->getUserId();
-                    }
+            $organizations->load('users');
+            foreach ($organizations as $organization) {
+                foreach ($organization->users as $user) {
+                    $target_ids[] = $user->getUserId();
                 }
             }
 
@@ -300,7 +296,7 @@ class AuthUserOrgHelper
         });
         $results = [];
         foreach ($orgsArray as $org) {
-            static::setJoinedOrganization($results, $org, $filterType, null, false);
+            static::setTreeJoinedOrganization($results, $org, $filterType);
         }
 
         return collect($results)->pluck('id')->toArray();
@@ -326,7 +322,7 @@ class AuthUserOrgHelper
 
         $results = [];
         foreach ($orgsArray as $org) {
-            static::setJoinedOrganization($results, $org, $filterType, $targetUserId, true);
+            static::setUserJoinedOrganization($results, $org, $filterType, $targetUserId);
         }
 
         return collect($results)->pluck('id')->toArray();
@@ -413,33 +409,57 @@ class AuthUserOrgHelper
     }
 
     /**
-     * Set joined organization. 
+     * Set tree joined organization. 
+     *
+     * @param array $results organization array.
+     * @param [type] $org
+     * @param string $filterType filter type. is upper or downer
+     * @return void
+     */
+    protected static function setTreeJoinedOrganization(&$results, $org, $filterType)
+    {
+        $results[] = $org;
+        // Set parent and child orgs.
+        // *This logic is reverse isGetDowner and parents.*
+        if (JoinedOrgFilterType::isGetUpper($filterType) && array_has($org, 'parents')) {
+            foreach ($org['parents'] as $parent) {
+                $results[] = $parent;
+            }
+        }
+        if (JoinedOrgFilterType::isGetDowner($filterType) && array_has($org, 'children')) {
+            foreach ($org['children'] as $child) {
+                $results[] = $child;
+            }
+        }
+    }
+
+    /**
+     * Set user joined organization. 
      *
      * @param array $results organization array.
      * @param [type] $org
      * @param string $filterType filter type. is upper or downer
      * @param string $targetUserId
-     * @param bool $isCheckUserId is check target user id joined.
      * @return void
      */
-    protected static function setJoinedOrganization(&$results, $org, $filterType, $targetUserId, bool $isCheckUserId = true)
+    protected static function setUserJoinedOrganization(&$results, $org, $filterType, $targetUserId)
     {
         // set $org id only $targetUserId
-        if($isCheckUserId){
-            if (!array_has($org, 'users') || !collect($org['users'])->contains(function ($user) use ($targetUserId) {
-                return $user['id'] == $targetUserId;
-            })) {
-                return;
-            }
+        if (!array_has($org, 'users') || !collect($org['users'])->contains(function ($user) use ($targetUserId) {
+            return $user['id'] == $targetUserId;
+        })) {
+            return;
         }
 
         $results[] = $org;
+
+        // Set parent and child orgs.
+        // *This logic is reverse isGetDowner and parents.*
         if (JoinedOrgFilterType::isGetDowner($filterType) && array_has($org, 'parents')) {
             foreach ($org['parents'] as $parent) {
                 $results[] = $parent;
             }
         }
-
         if (JoinedOrgFilterType::isGetUpper($filterType) && array_has($org, 'children')) {
             foreach ($org['children'] as $child) {
                 $results[] = $child;
