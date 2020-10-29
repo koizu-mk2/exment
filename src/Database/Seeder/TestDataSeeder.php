@@ -786,6 +786,8 @@ class TestDataSeeder extends Seeder
         $notify->custom_table_id = $custom_table->id;
         $notify->notify_trigger = 2;
         $notify->mail_template_id = 6;
+        $notify->trigger_settings = [
+            "notify_saved_trigger" => ["created","updated","deleted","shared","comment","attachmented"]];
         $notify->action_settings = [[
             "notify_action" => NotifyAction::SHOW_PAGE,
             "notify_action_target" => ["created_user"],
