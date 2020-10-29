@@ -9,7 +9,7 @@ use Exceedone\Exment\Jobs;
 class MicrosoftTeamsSender
 {
     use Notifiable;
-    use WebhookSender;
+    use WebhookTrait;
 
     /**
      * Create a new notification instance.

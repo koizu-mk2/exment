@@ -6,28 +6,10 @@ use Illuminate\Support\Facades\Notification;
 use Exceedone\Exment\Model\CustomTable;
 use Exceedone\Exment\Model\NotifyNavbar;
 use Exceedone\Exment\Services\NotifyService;
-use Exceedone\Exment\Notifications;
 use Exceedone\Exment\Jobs;
 
 class NotifyTest extends UnitTestBase
 {
-    public function testNotifyMail()
-    {
-        Notification::fake();
-        Notification::assertNothingSent();
-    
-        $template = CustomTable::getEloquent('mail_template')->getValueModel()->first();
-        $to_address = 'test@mail.com';
-
-        $notifiable = new Notifications\MailSender($template, $to_address);
-        $notifiable->send();
-
-        Notification::assertSentTo($notifiable, Jobs\MailSendJob::class, 
-            function($notification, $channels, $notifiable) use($template, $to_address) {
-                return ($notifiable->to() == $to_address);
-            });
-    }
-
     public function testNotifySlack()
     {
         Notification::fake();
@@ -37,8 +19,11 @@ class NotifyTest extends UnitTestBase
         $subject = 'テスト';
         $body = '本文です';
 
-        $notifiable = new Notifications\SlackSender($webhook_url, $subject, $body);
-        $notifiable->send();
+        $notifiable = NotifyService::notifySlack([
+            'webhook_url' => $webhook_url,
+            'subject' => $subject,
+            'body' => $body,
+        ]);
 
         Notification::assertSentTo($notifiable, Jobs\SlackSendJob::class, 
             function($notification, $channels, $notifiable) use($webhook_url, $subject, $body) {
@@ -57,8 +42,11 @@ class NotifyTest extends UnitTestBase
         $subject = 'テスト';
         $body = '本文です';
 
-        $notifiable = new Notifications\MicrosoftTeamsSender($webhook_url, $subject, $body);
-        $notifiable->send();
+        $notifiable = NotifyService::notifyTeams([
+            'webhook_url' => $webhook_url,
+            'subject' => $subject,
+            'body' => $body,
+        ]);
 
         Notification::assertSentTo($notifiable, Jobs\MicrosoftTeamsJob::class, 
             function($notification, $channels, $notifiable) use($webhook_url, $subject, $body) {

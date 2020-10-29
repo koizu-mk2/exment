@@ -2,7 +2,7 @@
 
 namespace Exceedone\Exment\Notifications;
 
-trait WebhookSender
+trait WebhookTrait
 {
     protected $subject;
     protected $body;

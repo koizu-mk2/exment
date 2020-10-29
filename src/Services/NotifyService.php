@@ -568,7 +568,9 @@ class NotifyService
 
         // send message
         $options = ['webhook_name' => $params['webhook_name'], 'webhook_icon' => $params['webhook_icon'], 'mention_here' => $params['mention_here'], 'mention_users' => $params['mention_users']];
-        $className::make($webhook_url, $slack_subject, $slack_body, $options)->send();
+        $sender = $className::make($webhook_url, $slack_subject, $slack_body, $options);
+        $sender->send();
+        return $sender;
     }
 
 

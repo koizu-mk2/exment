@@ -10,7 +10,7 @@ use Exceedone\Exment\Jobs;
 class SlackSender
 {
     use Notifiable;
-    use WebhookSender;
+    use WebhookTrait;
     
     protected $name;
     protected $icon;
